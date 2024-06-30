@@ -27,11 +27,26 @@ export interface LogItem {
     id: string,
 }
 
+export const LogToText = (targetItem: LogItem) => {
+    return targetItem.talkItems
+    .map(talk => talk.body.length > 0 ? `${talk.head})${talk.body}` : "")
+    .filter(item => item.length > 0)
+    .join("\n\n");
+}
+
 export interface LogCollection {
 
-    logItems: LogItem[],
+    items: LogItem[],
+}
 
-
+export interface Template {
+    label: string,
+    body: [
+        {
+            turn: string,
+            text: string,
+        }
+    ]
 }
 
 export const a = () => {

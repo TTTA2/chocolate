@@ -1,28 +1,35 @@
 <script lang="ts">
 
     import * as monaco from 'monaco-editor';
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
 
-    // export let value = "";
-    
     export let onChangeValue: ((value: string) => void) | undefined = undefined;
     export let currentModel: monaco.editor.ITextModel | undefined = undefined;
 
-    // const onChangeContent = (event) => {
+    export let hasFocus = false;
 
+    export let onBlur: (() => void) | undefined = undefined;
 
-    // }
+    //@ts-ignore
+    const settings = global_settings;
 
 	let editorElement: HTMLDivElement;
 	let editor: monaco.editor.IStandaloneCodeEditor;
 
+    $: if (hasFocus) {
+        console.log(hasFocus);
+        editor?.focus();
+    }
+
     $: {
         if (currentModel) editor?.setModel(currentModel);
     }
+
+    onDestroy(async () => editor.dispose());
     
     onMount(async () => {   
 
-        const keywords = ["test", "aaaaa"];
+        const keywords = ["test", "aaaaa", "支払い"];
 
         monaco.languages.register({
             id: "hl",
@@ -36,20 +43,43 @@
                 const range = new monaco.Range(position.lineNumber, wordUntil.startColumn, position.lineNumber, wordUntil.endColumn);
                 const replaceRange = new monaco.Range(position.lineNumber, wordUntil.startColumn - 1, position.lineNumber, wordUntil.endColumn);
 
-                const s: monaco.languages.CompletionItem[] = keywords.map(keyword => ({
-                    label: keyword,
-                    insertText: "",
+                const firstChar = model.getValueInRange(replaceRange);
+                const isTriggerChar = firstChar ==  "/";
+                
+                const a: monaco.IMarkdownString = { value: "# test"};
+
+                const snippet: monaco.languages.CompletionItem[] = settings.snippets.map((sn: any) => ({
+                    label: sn.keyword,
+                    insertText: isTriggerChar ? "" : sn.text,
+                    detail: sn.detail,
                     range,
+                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.None,
+                    document: a,
                     kind: monaco.languages.CompletionItemKind.Snippet,
-                    detail: "こんにちは\nテストですわ",
-                    documentation: "aaaaa",
-                    additionalTextEdits: [
+                    additionalTextEdits: isTriggerChar ? [
                         {
                             range: replaceRange,
-                            text: "こんにちは\nテストです\nあああああ\n",
+                            text: sn.text
                         }
-                    ],
-                }));
+                    ]: undefined
+                }))
+
+                const s = [...snippet];
+
+                // const s: monaco.languages.CompletionItem[] = keywords.map(keyword => ({
+                //     label: keyword,
+                //     insertText: "",
+                //     range,
+                //     kind: monaco.languages.CompletionItemKind.Snippet,
+                //     detail: "こんにちは\nテストですわ",
+                //     documentation: "aaaaa",
+                //     additionalTextEdits: [
+                //         {
+                //             range: replaceRange,
+                //             text: "こんにちは\nテストです\nあああああ\n",
+                //         }
+                //     ],
+                // }));
 
                 return { incomplete: false, suggestions: s}
             }
@@ -63,14 +93,12 @@
         });
 
         editor.onDidChangeModelContent((event) => {
-            // console.log(event);
             onChangeValue?.call(undefined, editor.getValue());
         });
 
-        // editor.getModel()?.onDidChangeContent((event) => {
-        //     console.log("test");
-        //     onChangeValue?.call(undefined, editor.getValue());
-        // })
+        editor.onDidBlurEditorText((e) => {
+            onBlur?.call(undefined);
+        });
     });
 
 </script>

@@ -31,6 +31,7 @@
 
     .body {
         white-space: pre;
+        text-wrap: wrap;
     }
 
     .card {

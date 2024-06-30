@@ -3,6 +3,7 @@
     import MonacoEditor from "./wrapper/monacoEditor/MonacoEditor.svelte";
     import type { LogItem, Talk, TextModel } from "../log";
     import TalkLog from "./talkLogView/TalkLog.svelte";
+    import { editor } from "monaco-editor";
 
     export let onChangeTalkItem: (((talkItem: Talk) => void) | undefined) = undefined;
     export let onCreateTalkItem: (((talkItem: Talk) => void) | undefined) = undefined;
@@ -13,8 +14,9 @@
     let currentTargetLogItem: LogItem | undefined;
 
     let selectedTalkItem: Talk | undefined;
-    // let currentModel: TextModel | undefined;
     let currentElement: HTMLDivElement | undefined;
+
+    let hasTextEditorFocus = false;
 
     $: currentModel = selectedTalkItem ? textModelMap.get(selectedTalkItem.id)?.model : undefined;
 
@@ -22,7 +24,11 @@
         selectedTalkItem = targetLogItem?.talkItems[0];
         currentTargetLogItem = targetLogItem;
     }
-
+    
+    //設定
+    //@ts-ignore　エラー回避
+	const settings = global_settings;
+    
     const getLastTalk = () => {
 
         if (!targetLogItem) return undefined;
@@ -32,27 +38,36 @@
     const handleChangeSelectedTalk = (talk: Talk, element: HTMLDivElement) => {
         currentElement = element;
         selectedTalkItem = talk;
+
+        hasTextEditorFocus = true;
         // currentModel = selectedTalkItem ? textModelMap.get(selectedTalkItem.id) : undefined;
     }
 
     const handleChangeTextChange = (value: string) => {
 
-        // const model = textModelMap.get(selectedTalkItem.id);            
+        // const model = textModelMap.get(selectedTalkItem.id);
         if (!selectedTalkItem) return;
         
         selectedTalkItem.body = value;
         currentElement?.scrollIntoView();
 
         const last = getLastTalk();
+
         if (last && selectedTalkItem.id == last?.id) {
 
-            const newTalkItem: Talk = { id: crypto.randomUUID(), body: "", head: "CU" };
+            const head = last.head == settings.turn1 ? settings.turn2 : settings.turn1;
+
+            const newTalkItem: Talk = { id: crypto.randomUUID(), body: "", head };
             targetLogItem?.talkItems.push(newTalkItem);
 
             onCreateTalkItem?.call(undefined, newTalkItem);
         }
 
         onChangeTalkItem?.call(undefined, selectedTalkItem);
+    }
+
+    const handleBlur = () => {
+        hasTextEditorFocus = false;
     }
 
 </script>
@@ -62,7 +77,11 @@
     <TalkLog onSelectedChangeTalk={handleChangeSelectedTalk} {...{selectedTalkItem, targetLogItem}}/>
 
     <div class="textEditor {currentModel == undefined ? 'hidden' : ''}">
-        <MonacoEditor onChangeValue={handleChangeTextChange} currentModel={currentModel}></MonacoEditor>
+        <MonacoEditor 
+            onBlur={handleBlur} 
+            onChangeValue={handleChangeTextChange} 
+            currentModel={currentModel}
+            hasFocus={hasTextEditorFocus} ></MonacoEditor>
     </div>
 
 </div>
@@ -71,6 +90,7 @@
     
     .editorContainer {
         display: grid;
+        /* grid-template-rows: 0.5fr minmax(0, 0.5fr);         */
         grid-template-columns: 0.5fr minmax(0, 0.5fr);
         width: 100%;
         height: 100%;       
@@ -80,7 +100,7 @@
     .textEditor {
         width: 100%;
         height: 100%;
-
+        overflow: hidden;
     }
 
 </style>
