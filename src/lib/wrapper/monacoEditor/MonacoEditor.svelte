@@ -9,6 +9,7 @@
     export let hasFocus = false;
 
     export let onBlur: (() => void) | undefined = undefined;
+    export let onKeyDown: ((e: any) => void) | undefined = undefined;
 
     //@ts-ignore
     const settings = global_settings;
@@ -17,7 +18,6 @@
 	let editor: monaco.editor.IStandaloneCodeEditor;
 
     $: if (hasFocus) {
-        console.log(hasFocus);
         editor?.focus();
     }
 
@@ -28,8 +28,6 @@
     onDestroy(async () => editor.dispose());
     
     onMount(async () => {   
-
-        const keywords = ["test", "aaaaa", "支払い"];
 
         monaco.languages.register({
             id: "hl",
@@ -54,7 +52,7 @@
                     detail: sn.detail,
                     range,
                     insertTextRules: monaco.languages.CompletionItemInsertTextRule.None,
-                    document: a,
+                    // document: a,
                     kind: monaco.languages.CompletionItemKind.Snippet,
                     additionalTextEdits: isTriggerChar ? [
                         {
@@ -90,6 +88,10 @@
             language: "hl",
             automaticLayout: true,
             scrollBeyondLastLine: true,
+        });
+
+        editor.onKeyDown((e) => {
+            onKeyDown?.call(undefined, e);
         });
 
         editor.onDidChangeModelContent((event) => {

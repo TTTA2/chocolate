@@ -70,6 +70,37 @@
         hasTextEditorFocus = false;
     }
 
+    const handleKeyDown = (e: any) => {
+
+        if (e.code == "Tab") {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (!targetLogItem || !selectedTalkItem) return;
+
+            const currentTalkIndex = targetLogItem?.talkItems.findIndex(item => item.id == selectedTalkItem?.id);
+
+            // console.log(targetLogItem?.talkItems, selectedTalkItem?.id, currentTalkIndex);
+
+            if (currentTalkIndex > -1) {
+
+                console.log(currentTalkIndex);
+
+                if (!e.shiftKey && currentTalkIndex < targetLogItem.talkItems.length - 1) {
+                    selectedTalkItem = targetLogItem.talkItems[currentTalkIndex + 1];   
+                }
+                else if (e.shiftKey && currentTalkIndex > 0) {
+                    selectedTalkItem = targetLogItem.talkItems[currentTalkIndex - 1];   
+                }
+
+            }
+
+            // !e.shiftKey && 
+
+
+        }
+    }
+
 </script>
 
 <div class="editorContainer">
@@ -81,7 +112,8 @@
             onBlur={handleBlur} 
             onChangeValue={handleChangeTextChange} 
             currentModel={currentModel}
-            hasFocus={hasTextEditorFocus} ></MonacoEditor>
+            hasFocus={hasTextEditorFocus} 
+            onKeyDown={handleKeyDown}></MonacoEditor>
     </div>
 
 </div>
