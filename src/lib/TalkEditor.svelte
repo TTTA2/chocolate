@@ -24,6 +24,12 @@
         selectedTalkItem = targetLogItem?.talkItems[0];
         currentTargetLogItem = targetLogItem;
     }
+
+    $: if (targetLogItem?.talkItems.find(item => selectedTalkItem?.id == item.id) == undefined) {
+        selectedTalkItem = targetLogItem?.talkItems[0];
+    }
+
+    // $: if (selectedTalkItem)
     
     //設定
     //@ts-ignore　エラー回避

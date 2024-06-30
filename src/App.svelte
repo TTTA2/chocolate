@@ -171,6 +171,7 @@
 		});
 
 		selectedLogItem.talkItems = insertTalks;
+		
 
 		// selectedLogItem?.talkItems.push(...insertTalks);
 	}
