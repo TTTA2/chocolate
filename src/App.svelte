@@ -139,7 +139,7 @@
 	};
 
 	const handleCopyToText = () => {
-		if (selectedLogItem) console.log(LogToText(selectedLogItem));
+		if (selectedLogItem) navigator.clipboard.writeText(LogToText(selectedLogItem));
 	};
 
 	const saveToLocal = () => {
