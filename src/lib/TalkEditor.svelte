@@ -1,14 +1,17 @@
 <script lang="ts">
 
     import MonacoEditor from "./wrapper/monacoEditor/MonacoEditor.svelte";
-    import type { LogItem, Talk, TextModel } from "../log";
+    import { getLastTalk, type LogItem, type Talk, type TextModel } from "../log";
     import TalkLog from "./talkLogView/TalkLog.svelte";
     import { editor } from "monaco-editor";
+    import { Button } from "./components/ui/button";
+    import { Input } from "./components/ui/input";
 
     export let onChangeTalkItem: (((talkItem: Talk) => void) | undefined) = undefined;
     export let onCreateTalkItem: (((talkItem: Talk) => void) | undefined) = undefined;
+    export let onChangeLogItem: (((targetLog: LogItem) => void) | undefined) = undefined;
 
-    export let targetLogItem: LogItem | undefined;
+    export let targetLogItem: LogItem;
     export let textModelMap: Map<string, TextModel> = new Map<string, TextModel>();
 
     let currentTargetLogItem: LogItem | undefined;
@@ -34,18 +37,17 @@
     //設定
     //@ts-ignore　エラー回避
 	const settings = global_settings;
-    
-    const getLastTalk = () => {
 
-        if (!targetLogItem) return undefined;
-        return targetLogItem.talkItems[targetLogItem.talkItems.length - 1];
-    }
+    const handleChangeSelectedTalk = (talk: Talk, newValue: boolean, element: HTMLDivElement) => {
 
-    const handleChangeSelectedTalk = (talk: Talk, element: HTMLDivElement) => {
-        currentElement = element;
-        selectedTalkItem = talk;
+        if (newValue) {
+            currentElement = element;
+            selectedTalkItem = talk;
+            hasTextEditorFocus = true;
 
-        hasTextEditorFocus = true;
+            currentElement?.scrollIntoView({behavior: "smooth" });
+        }
+
         // currentModel = selectedTalkItem ? textModelMap.get(selectedTalkItem.id) : undefined;
     }
 
@@ -57,7 +59,7 @@
         selectedTalkItem.body = value;
         currentElement?.scrollIntoView();
 
-        const last = getLastTalk();
+        const last = targetLogItem ? getLastTalk(targetLogItem) : undefined;
 
         if (last && selectedTalkItem.id == last?.id) {
 
@@ -89,9 +91,6 @@
             // console.log(targetLogItem?.talkItems, selectedTalkItem?.id, currentTalkIndex);
 
             if (currentTalkIndex > -1) {
-
-                console.log(currentTalkIndex);
-
                 if (!e.shiftKey && currentTalkIndex < targetLogItem.talkItems.length - 1) {
                     selectedTalkItem = targetLogItem.talkItems[currentTalkIndex + 1];   
                 }
@@ -102,29 +101,61 @@
             }
 
             // !e.shiftKey && 
-
-
         }
+    }
+
+    const handleReverseTurn = () => {
+
+        if (!targetLogItem) return;
+
+        const t1 = settings.turn1, t2 = settings.turn2;
+        const newItems = targetLogItem.talkItems.map(talk => ({...talk, head: talk.head == t1 ? t2 : t1})) 
+        targetLogItem.talkItems = newItems;
+
+        onChangeLogItem?.call(undefined, targetLogItem);
+    }
+
+    const handleChangeTimeValue = () => {
+        onChangeLogItem?.call(undefined, targetLogItem);
+    }
+
+    const a = {
+        aa: "",
+        bb: "",
     }
 
 </script>
 
-<div class="editorContainer">
-
-    <TalkLog onSelectedChangeTalk={handleChangeSelectedTalk} {...{selectedTalkItem, targetLogItem}}/>
-
-    <div class="textEditor {currentModel == undefined ? 'hidden' : ''}">
-        <MonacoEditor 
-            onBlur={handleBlur} 
-            onChangeValue={handleChangeTextChange} 
-            currentModel={currentModel}
-            hasFocus={hasTextEditorFocus} 
-            onKeyDown={handleKeyDown}></MonacoEditor>
+<div class="toolbarContainer" >
+    <div class="px-3 py-1 flex gap-4">
+        <Input on:change={handleChangeTimeValue} bind:value={targetLogItem.openTimeText} class="w-36" placeholder="入電時間(時:分)" />
+        <Input on:change={handleChangeTimeValue} bind:value={targetLogItem.acdTimeText} class="w-48" placeholder="通話時間(時:分:秒)" />
+        <Button size="default" variant="outline" on:click={handleReverseTurn}>ターン反転</Button>
     </div>
+    <div class="editorContainer">
 
+        <TalkLog onSelectedChangeTalk={handleChangeSelectedTalk} {...{selectedTalkItem, targetLogItem}}/>
+    
+        <div class="textEditor {currentModel == undefined ? 'hidden' : ''}">
+            <MonacoEditor 
+                onBlur={handleBlur} 
+                onChangeValue={handleChangeTextChange} 
+                currentModel={currentModel}
+                hasFocus={hasTextEditorFocus} 
+                onKeyDown={handleKeyDown}></MonacoEditor>
+        </div>
+    </div>
 </div>
 
 <style>
+
+    .toolbarContainer {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        width: 100%;
+        height: 100%; 
+        overflow: hidden;
+    }
     
     .editorContainer {
         display: grid;

@@ -4,18 +4,18 @@
 
     export let targetLogItem;
     export let selectedTalkItem: Talk | undefined = undefined;
-    export let onSelectedChangeTalk: (talk: Talk, element: HTMLDivElement) => void;
+    export let onSelectedChangeTalk: (talk: Talk, newValue: boolean, element: HTMLDivElement) => void;
 
-    const handleSelectedTalk = (talk: Talk, element: HTMLDivElement) => {
-        onSelectedChangeTalk?.call(undefined, talk, element);
+    const handleSelectedTalk = (talk: Talk, newValue: boolean, element: HTMLDivElement) => {
+        onSelectedChangeTalk?.call(undefined, talk, newValue, element);
     }
 
 </script>
 
-<div class="body flex flex-col p-4 gap-4">
+<div class="body flex flex-col p-3 gap-4">
     {#each targetLogItem?.talkItems ?? [] as talk, index }
         <TalkLogCard selected={selectedTalkItem?.id == talk.id} 
-        onSelectedTalk={handleSelectedTalk}
+        onSelectedChangeTalk={handleSelectedTalk}
         target={talk}></TalkLogCard>
     {/each}
 </div>

@@ -27,6 +27,31 @@ const global_settings = {
                     text: "test4",
                 }
             ],
+        },
+
+        {
+            label: "ラベル2",
+            body: [
+                {
+                    turn: "CU",
+                    text: "test1",
+                },
+
+                {
+                    turn: "HL",
+                    text: "test2",
+                },
+
+                {
+                    turn: "CU",
+                    text: "test3\ntest3lf",
+                },
+
+                {
+                    turn: "HL",
+                    text: "test4",
+                }
+            ],
         }
     ],
 

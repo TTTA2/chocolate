@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { Button } from "$lib/components/ui/button";
 	import * as Dialog from "$lib/components/ui/dialog";
+    import { Input } from "$lib/components/ui/input";
 	import * as Select from "$lib/components/ui/select/index.js";
+    import SettingDialog from "$lib/dialog/SettingDialog.svelte";
 
 	import TalkEditor from "./lib/TalkEditor.svelte";
 
 	import {
 		LogToText,
 		craeteTextModel,
+		getLastTalk,
 		type LogCollection,
 		type LogItem,
 		type Talk,
@@ -19,51 +22,6 @@
 	const keys = {
 		logData: "a12logs",
 	};
-
-	// let log: LogCollection = {
-	// 	items: [{
-	// 		id: crypto.randomUUID(),
-	// 		title: "test",
-	// 		talkItems: [
-
-	// 			{
-	// 				head: "SD",
-	// 				body: "test\nadaw\nadwada\nsdawdwa\n",
-	// 				id: crypto.randomUUID(),
-	// 			},
-
-	// 			{
-	// 				head: "CS",
-	// 				body: "あいえうお\nかきくけこ",
-	// 				id: crypto.randomUUID(),
-
-	// 			},
-
-	// 			{
-	// 				head: "SD",
-	// 				body: "あいえうお\nかきくけこ",
-	// 				id: crypto.randomUUID(),
-
-	// 			},
-
-	// 			{
-	// 				head: "CS",
-	// 				body: "テスト",
-	// 				id: crypto.randomUUID(),
-	// 			},
-	// 		]
-	// 	},
-	// 	{
-	// 		title: "test2",
-	// 		id: crypto.randomUUID(),
-
-	// 		talkItems: [{
-	// 			head: "HL",
-	// 			body: "test",
-	// 			id: crypto.randomUUID(),
-	// 		}]
-	// 	}]
-	// };
 
 	//設定
 	//@ts-ignore　エラー回避
@@ -113,33 +71,60 @@
 		saveToLocal();
 	};
 
-	//新規作成のクリックイベント
-	const handleCreateNewHistory = () => {
-		const firstTalk: Talk = {
-			id: crypto.randomUUID(),
-			head: settings.turn1,
-			body: "",
-		};
-
-		textModelMap.set(
-			firstTalk.id,
-			craeteTextModel(firstTalk.id, firstTalk.body),
-		);
-
-		const newLogItem: LogItem = {
-			id: crypto.randomUUID(),
-			title: "新規履歴",
-			talkItems: [firstTalk],
-		};
-
-		log.items.push(newLogItem);
-		selectedLogItem = newLogItem;
-
+	const handleChangeLogData = (e: LogItem) => {
+		console.log(e);
 		saveToLocal();
-	};
+	}
+
+	// //新規作成のクリックイベント
+	// const handleCreateNewHistory = () => {
+	// 	const firstTalk: Talk = {
+	// 		id: crypto.randomUUID(),
+	// 		head: settings.turn1,
+	// 		body: "",
+	// 	};
+
+	// 	textModelMap.set(
+	// 		firstTalk.id,
+	// 		craeteTextModel(firstTalk.id, firstTalk.body),
+	// 	);
+
+	// 	const dt = new Date();
+
+	// 	const newLogItem: LogItem = {
+	// 		id: crypto.randomUUID(),
+	// 		title: `新規履歴-${dt.getMonth()}/${dt.getDate()} ${dt.getHours()}:${dt.getMinutes()}`,
+	// 		talkItems: [firstTalk],
+	// 	};
+
+	// 	log.items.push(newLogItem);
+	// 	selectedLogItem = newLogItem;
+
+	// 	saveToLocal();
+	// };
 
 	const handleCopyToText = () => {
-		if (selectedLogItem) navigator.clipboard.writeText(LogToText(selectedLogItem));
+
+		if (selectedLogItem) {
+
+			const text = LogToText(selectedLogItem);
+
+			const init = new Date("1970/1/1 0:0:0");
+			const t1 = new Date("1970/1/1 " + selectedLogItem.openTimeText);
+			const t2 = new Date("1970/1/1 " + selectedLogItem.acdTimeText);
+			
+			const calcTime = new Date(t1.getTime() + (t2.getTime() - init.getTime()));
+
+			const head = selectedLogItem.talkItems[0].head == settings.turn1 ? "入電" : "架電";
+
+			const startTime = `${head}:${("0" + t1.getHours()).slice(-2)}:${("0" + t1.getMinutes()).slice(-2)}`;
+			const endTime = `切電:${("0" + calcTime.getHours()).slice(-2)}:${("0" + calcTime.getMinutes()).slice(-2)}`;
+
+			const resultText = [startTime, endTime, "", LogToText(selectedLogItem)].join("\n")
+
+			navigator.clipboard.writeText(resultText);
+
+		}
 	};
 
 	const saveToLocal = () => {
@@ -170,24 +155,88 @@
 			return newTalk;
 		});
 
-		selectedLogItem.talkItems = insertTalks;
-		
+		if (selectedLogItem) {
+			
+			const last = getLastTalk(selectedLogItem);
 
-		// selectedLogItem?.talkItems.push(...insertTalks);
+			if (last && insertTalks.length > 0) {
+				if (last.head == insertTalks[0].head) {
+					last.body = `${last.body}${last.body.length > 0 ? "\n" : ""}${insertTalks[0].body}`;
+					insertTalks.shift();
+				}
+			}
+		}
+
+		selectedLogItem.talkItems = [...selectedLogItem.talkItems, ...insertTalks];
 	}
+
+	let showPreviewState = false;
+	let previewAreaElement: HTMLTextAreaElement;
+	let previewText = "";
+
+	const handleOpenChangePreview = (state: boolean) => {
+		showPreviewState = state;
+		if (!selectedLogItem) return;
+		previewText = LogToText(selectedLogItem);
+	}
+
+	let newHistoryTitle = "";
+	let isShowTitleInputDialog = false;
+
+	const handleCreateNewHistory2 = () => {
+		const dt = new Date();
+		newHistoryTitle = `新規履歴-${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${dt.getMinutes()}`;
+		isShowTitleInputDialog = true;
+	}
+
+	const handleCreateNewHistoryOK = () => {
+
+		const firstTalk: Talk = {
+			id: crypto.randomUUID(),
+			head: settings.turn1,
+			body: "",
+		};
+
+		textModelMap.set(
+			firstTalk.id,
+			craeteTextModel(firstTalk.id, firstTalk.body),
+		);
+
+		const dt = new Date();
+
+		const newLogItem: LogItem = {
+			id: crypto.randomUUID(),
+			title: newHistoryTitle,
+			talkItems: [firstTalk],
+			openTimeText: "",
+			acdTimeText: "",
+		};
+
+		log.items.push(newLogItem);
+		selectedLogItem = newLogItem;
+
+		saveToLocal();
+
+		isShowTitleInputDialog = false;
+	}
+
+	const handleCreateNewHistoryCancel = () => {
+		isShowTitleInputDialog = false;
+	}
+
 
 </script>
 
 <main class="text-foreground bg-background antialiased">
 	<div class="mainContainer">
-		<div class="px-3 py-3 flex gap-2">
+		<div class="px-3 py-3 flex gap-2 justify-between">
 			<Select.Root
 				{items}
 				selected={selectedItem}
 				onSelectedChange={handleSelectLogItem}
 				portal={null}>
 
-				<Select.Trigger class="w-[180px]">
+				<Select.Trigger class="">
 					<Select.Value placeholder="履歴" />
 				</Select.Trigger>
 				<Select.Content>
@@ -197,8 +246,31 @@
 				</Select.Content>
 			</Select.Root>
 
-			<Button on:click={handleCreateNewHistory} variant="default">新規作成</Button>
-			<Button on:click={handleCopyToText} variant="default">テキストとしてコピー</Button>
+			<!-- <Button on:click={handleCreateNewHistory} variant="default">新規作成</Button> -->
+
+			<Dialog.Root open={isShowTitleInputDialog}>
+				<Dialog.Trigger>
+					<Button variant="default" on:click={handleCreateNewHistory2}>新規作成</Button>
+				</Dialog.Trigger>
+				<Dialog.Content>
+					<Dialog.Header>
+						<Dialog.Title>履歴を新規作成</Dialog.Title>
+
+						<Dialog.Description>
+							<div class="flex flex-col gap-4 pt-4 pb-4">
+								タイトルを入力してください。
+								<Input bind:value={newHistoryTitle} />
+							</div>
+						</Dialog.Description>
+
+						<div class="flex justify-end gap-2">
+							<Button on:click={handleCreateNewHistoryOK} variant="default">作成</Button>
+							<Button on:click={handleCreateNewHistoryCancel} variant="default">キャンセル</Button>
+						</div>
+
+					</Dialog.Header>
+				</Dialog.Content>
+			</Dialog.Root>
 
 			<Dialog.Root>
 				<Dialog.Trigger>
@@ -209,19 +281,46 @@
 						<Dialog.Title>挿入するテンプレートを選択してください</Dialog.Title>
 						<Dialog.Description>
 							
-							{#each templates as template}
-								<div class="flex gap-2 w-full">
+							<div class="flex flex-col gap-2">
+								{#each templates as template}
+								<div class="flex gap-2 w-full items-center justify-between">
 									<div>{template.label}</div>
 									<Dialog.Close>
-										<Button on:click={() => insertTemplate(template)}>挿入</Button>	
-									</Dialog.Close>								
+										<Button size="sm" on:click={() => insertTemplate(template)}>追加</Button>	
+									</Dialog.Close>
 								</div>
 							{/each}
+							</div>
 
 						</Dialog.Description>
 					</Dialog.Header>
 				</Dialog.Content>
 			</Dialog.Root>
+
+			<Button on:click={handleCopyToText} variant="default">テキストとしてコピー</Button>
+
+			<Dialog.Root onOpenChange={handleOpenChangePreview}>
+				<Dialog.Trigger>
+					<Button variant="default">プレビュー</Button>
+				</Dialog.Trigger>
+				<Dialog.Content class="max-w-fit">
+					<Dialog.Header>
+						<Dialog.Title>プレビュー</Dialog.Title>
+						<Dialog.Description>
+							<div class="overflow-auto p-4 h-[400px] w-[800px] whitespace-pre">{previewText}</div>
+								<!-- <textarea 
+									bind:this={previewAreaElement} 
+									
+									class="overflow-auto p-2 h-[400px] w-[100%]" 
+									/> -->
+						</Dialog.Description>
+						<Dialog.Close>
+							<Button variant="default">閉じる</Button>
+						</Dialog.Close>
+					</Dialog.Header>
+				</Dialog.Content>
+			</Dialog.Root>
+
 
 			<Dialog.Root>
 				<Dialog.Trigger>
@@ -240,15 +339,22 @@
 				</Dialog.Content>
 			</Dialog.Root>
 
+
+			<SettingDialog></SettingDialog>
+
 		</div>
 
-		<TalkEditor
-			targetLogItem={selectedLogItem}
-			onChangeTalkItem={handleChangeTalkItem}
-			onCreateTalkItem={handleCreateTalkItem}
-			{...{ textModelMap }}
-		></TalkEditor>
 
+		{#if selectedLogItem} 
+			<TalkEditor
+				targetLogItem={selectedLogItem}
+				onChangeLogItem={handleChangeLogData}
+				onChangeTalkItem={handleChangeTalkItem}
+				onCreateTalkItem={handleCreateTalkItem}
+				{...{ textModelMap }}
+			></TalkEditor>
+		{/if}
+		
 	</div>
 </main>
 

@@ -14,6 +14,13 @@ export const craeteTextModel = (id: string, textBody: string, onChangeContent?: 
     return textModel;
 }
 
+export const getLastTalk = (targetLogItem: LogItem) => {
+
+    if (!targetLogItem) return undefined;
+    if (targetLogItem.talkItems.length == 0) return undefined;
+    return targetLogItem.talkItems[targetLogItem.talkItems.length - 1];
+}
+
 export interface Talk {
     head: string,
     body: string,
@@ -22,6 +29,8 @@ export interface Talk {
 
 export interface LogItem {
 
+    openTimeText: string,
+    acdTimeText: string,
     title: string,
     talkItems: Talk[],
     id: string,

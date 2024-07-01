@@ -3,21 +3,29 @@
 
     export let target: Talk;
     export let selected: boolean = false;
+    export let onSelectedChangeTalk: (talk: Talk, newSelectedState: boolean, element: HTMLDivElement) => void;
 
-    export let onSelectedTalk: (talk: Talk, element: HTMLDivElement) => void;
-
+    let element: HTMLDivElement;
     let b = undefined;
+    let preSelectedState = false;
 
     $: selectedClass = selected ? "bg-blue-200" : "";
 
+    $: if (preSelectedState != selected) {
+        onSelectedChangeTalk?.call(undefined, target, selected, element,);
+        preSelectedState = selected;
+    }
+
     const handleClickCard = (e: any) => {
         b = e.target;
-        onSelectedTalk?.call(undefined, target, b);
+        selected = true;
+        // onClickTalk?.call(undefined, target, element);
     }
+
 
 </script>
 
-<div class="card flex border rounded-md hover:bg-blue-100 {selectedClass}" on:click={handleClickCard}>
+<div class="card flex border rounded-md hover:bg-blue-100 {selectedClass}" bind:this={element} on:click={handleClickCard}>
     <div class="header">{target.head}</div>
     <div class="body">{target.body}</div>
 </div>
